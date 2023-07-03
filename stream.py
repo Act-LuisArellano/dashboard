@@ -43,7 +43,7 @@ st.set_page_config(
 
 render_svg_example()
 
-st.subheader('Multas Dashboard')
+st.title('Multas Dashboard')
 
 st.subheader('Date range')
 st.warning('Selected date range would be applied to all the charts')
@@ -160,5 +160,5 @@ with right_column:
     st.plotly_chart(fig, use_container_width=True)
 
 
-st.subheader('Full Dataset')
+st.title('Full Dataset')
 st.dataframe(df)
