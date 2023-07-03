@@ -66,7 +66,7 @@ with right_column:
 st.title('Multas')
 df_multas = df.query('TipoDeSancion == "multa (sanción pecuniaria)"').groupby('Subsector')['Monto'].sum().to_frame().sort_values(by='Monto', ascending=False).reset_index()
 st.subheader('Montos totales por subsector')
-top_n = st.slider('Select top n', 3, df_multas.shape[0], 3)
+top_n = st.slider('Select top n', 3, df_multas.shape[0], 3, key='multas')
 st.metric(label="Total Acumulado", value=f'${round(df_multas.head(top_n).Monto.sum()/1000000,0)}M', delta=f'${round(df_multas.head(top_n).iloc[-1].Monto/1000000,0)}M')
 left_column, right_column = st.columns(2)
 with left_column:
@@ -109,30 +109,55 @@ with right_column:
     fig.update_layout(showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
 
-# #top infractores por monto acumulado o por numero de multas
-# df_multas_acumuladas = df.Subsector.to_list()
-# df_multas_acumuladas.append('FechaDeImposicion')
-# df_multas_acumuladas.append('Monto')
-# df_multas_acumuladas = df.query('Subsector in @df_multas_acumuladas').groupby(['Subsector', 'FechaDeImposicion'])['Monto'].sum().to_frame().reset_index()
-# df_multas_acumuladas['TotalAcumulado'] = df_multas_acumuladas.groupby('Subsector')['Monto'].cumsum()
-# df_multas_acumuladas['TotalAcumulado'] = df_multas_acumuladas['TotalAcumulado'].astype(int)
-# df_multas_acumuladas['TotalAcumulado'] = df_multas_acumuladas['TotalAcumulado'].astype(str)
-# df_multas_acumuladas['TotalAcumulado'] = df_multas_acumuladas['TotalAcumulado'].apply(lambda x: f'${x}')
-# left_column, right_column = st.columns(2)
-# with left_column:
-#     st.subheader('Top infractores por monto acumulado')
-#     top_n = st.slider('Select top n', 3, df_multas_acumuladas.shape[0], 3)
-# with right_column:
-#     pass
-# left_column, right_column = st.columns(2)
-# with left_column:
-#     st.dataframe(df_multas_acumuladas.groupby('Subsector')['TotalAcumulado'].max().sort_values(ascending=False).head(top_n))
-# with right_column:
-#     fig = px.bar(df_multas_acumuladas.groupby('Subsector')['TotalAcumulado'].max().sort_values(ascending=False).head(top_n), x='Subsector', y='TotalAcumulado', color='TotalAcumulado', color_continuous_scale=px.colors.sequential.Viridis)
-#     st.plotly_chart(fig, use_container_width=True)
+#top infractores por monto acumulado
+st.title('Infractores')
+df_infractores = df.groupby('Infractor')['Monto'].sum().to_frame().sort_values(by='Monto', ascending=False).reset_index()
+st.subheader('Top infractores por monto acumulado')
+top_n_infractores = st.slider('Select top n', 3, df_infractores.shape[0], 3, key='infractores')
+st.metric(label="Total Acumulado", value=f'${round(df_infractores.head(top_n_infractores).Monto.sum()/1000000,0)}M', delta=f'${round(df_infractores.head(top_n_infractores).iloc[-1].Monto/1000000,0)}M')
+left_column, right_column = st.columns(2)
+with left_column:
+    st.dataframe(df_infractores.head(top_n_infractores))
+with right_column:
+    fig = px.bar(df_infractores.head(top_n_infractores), x='Infractor', y='Monto', color='Monto', color_continuous_scale=px.colors.sequential.Viridis)
+    st.plotly_chart(fig, use_container_width=True)
 
+#top infractores por numero de multas
+st.subheader('Top infractores por numero de multas')
+df_infractores = df.groupby('Infractor')['Monto'].count().to_frame().sort_values(by='Monto', ascending=False).reset_index()
+top_n_ixm = st.slider('Select top n', 3, df_infractores.shape[0], 3, key='infractores_ixm')
+st.metric(label="Total Acumulado", value=f'{round(df_infractores.head(top_n_ixm).Monto.sum(),0)}', delta=f'{round(df_infractores.head(top_n_ixm).iloc[-1].Monto,0)}')
+left_column, right_column = st.columns(2)
+with left_column:
+    st.dataframe(df_infractores.head(top_n_ixm))
+with right_column:
+    fig = px.bar(df_infractores.head(top_n_ixm), x='Infractor', y='Monto', color='Monto', color_continuous_scale=px.colors.sequential.Viridis)
+    st.plotly_chart(fig, use_container_width=True)
 
+#top conducta sancionada (col ConductaSancionada)
+st.title('Conducta Sancionada')
+df_conducta_sancionada = df.groupby('ConductaSancionada')['Monto'].sum().to_frame().sort_values(by='Monto', ascending=False).reset_index()
+st.subheader('Top conducta sancionada por monto acumulado')
+top_n_conducta_sancionada = st.slider('Select top n', 3, df_conducta_sancionada.shape[0], 3, key='conducta_sancionada')
+st.metric(label="Total Acumulado", value=f'${round(df_conducta_sancionada.head(top_n_conducta_sancionada).Monto.sum()/1000000,0)}M', delta=f'${round(df_conducta_sancionada.head(top_n_conducta_sancionada).iloc[-1].Monto/1000000,0)}M')
+left_column, right_column = st.columns(2)
+with left_column:
+    st.dataframe(df_conducta_sancionada.head(top_n_conducta_sancionada))
+with right_column:
+    fig = px.bar(df_conducta_sancionada.head(top_n_conducta_sancionada), x='ConductaSancionada', y='Monto', color='Monto', color_continuous_scale=px.colors.sequential.Viridis)
+    st.plotly_chart(fig, use_container_width=True)
 
+#top conducta sancionada (col ConductaSancionada) por numero de multas
+st.subheader('Top conducta sancionada por numero de multas')
+df_conducta_sancionada = df.groupby('ConductaSancionada')['Monto'].count().to_frame().sort_values(by='Monto', ascending=False).reset_index()
+top_n_conducta_sancionada = st.slider('Select top n', 3, df_conducta_sancionada.shape[0], 3, key='conducta_sancionada_ixm')
+st.metric(label="Total Acumulado", value=f'{round(df_conducta_sancionada.head(top_n_conducta_sancionada).Monto.sum(),0)}', delta=f'{round(df_conducta_sancionada.head(top_n_conducta_sancionada).iloc[-1].Monto,0)}')
+left_column, right_column = st.columns(2)
+with left_column:
+    st.dataframe(df_conducta_sancionada.head(top_n_conducta_sancionada))
+with right_column:
+    fig = px.bar(df_conducta_sancionada.head(top_n_conducta_sancionada), x='ConductaSancionada', y='Monto', color='Monto', color_continuous_scale=px.colors.sequential.Viridis)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 st.subheader('Full Dataset')
