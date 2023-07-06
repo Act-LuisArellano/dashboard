@@ -191,17 +191,24 @@ with right_column:
 
 
 #sales experiment
-st.title('Maxima ganancia posible')
+st.title('Máxima ganancia posible')
 #add streamlit multiselect of Subsector col values for exclude in dataframe
 subsector_excluded = st.multiselect(
     'Selecciona el subsector a excluir',
     df['Subsector'].unique(),
     default=[np.nan]
 )
+#price range streamlit inputs
+st.subheader('Rango de precios')
+left_column, right_column = st.columns(2)
+with left_column:
+    min_price = st.number_input('Precio mínimo anual', value=100000, step=1000)
+with right_column:
+    max_price = st.number_input('Precio máximo anual', value=300000, step=1000)
 
 #query df with excluded values
 df_q = df.query('Subsector not in @subsector_excluded')
-prices = np.arange(100000, 300000, 1000)
+prices = np.arange(min_price, max_price, 1000)
 df_sorted = df_q.sort_values(by='Monto')
 sales = [(df_sorted['Monto'] > price).sum() for price in prices]
 data = {'price': prices, 'sales': sales}
@@ -236,6 +243,7 @@ with center:
 with right:
     st.metric(label="Ganancia máxima", value=f'${round(df_plot.loc[max_profit_index, "profit"]/1_000_000,2)}M')
 
+st.markdown("***")
 
 st.title('Full Dataset')
 st.dataframe(df)
