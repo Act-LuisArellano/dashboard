@@ -57,6 +57,8 @@ render_svg_example()
 
 st.title('Multas Dashboard')
 
+st.markdown("***")
+
 st.subheader('Date range')
 st.warning('Selected date range would be applied to all the charts')
 left_column, right_column = st.columns(2)
@@ -64,16 +66,21 @@ with left_column:
     start_date = st.date_input('Start date', value=datetime(2018,12,4))
 with right_column:
     end_date = st.date_input('End date', value=df['FechaDeImposicion'].max())
+
+st.markdown("***")
+
 #filter df by date range
 df = df.query('FechaDeImposicion >= @start_date and FechaDeImposicion <= @end_date')
 
-st.subheader('Tipo de Sanción')
+st.title('Tipo de Sanción')
 left_column, right_column = st.columns(2)
 with left_column:
     st.dataframe(df.groupby('TipoDeSancion')['TipoDeSancion'].count().to_frame())
 with right_column:
     fig = px.pie(df, names='TipoDeSancion', color_discrete_sequence=px.colors.sequential.Viridis)
     st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("***")
 
 st.title('Multas')
 df_multas = df.query('TipoDeSancion == "multa (sanción pecuniaria)"').groupby('Subsector')['Monto'].sum().to_frame().sort_values(by='Monto', ascending=False).reset_index()
@@ -121,6 +128,8 @@ with right_column:
     fig.update_layout(showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
 
+st.markdown("***")
+
 #top infractores por monto acumulado
 st.title('Infractores')
 df_infractores = df.groupby('Infractor')['Monto'].sum().to_frame().sort_values(by='Monto', ascending=False).reset_index()
@@ -145,6 +154,8 @@ with left_column:
 with right_column:
     fig = px.bar(df_infractores.head(top_n_ixm), x='Infractor', y='Monto', color='Monto', color_continuous_scale=px.colors.sequential.Viridis)
     st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("***")
 
 #top conducta sancionada (col ConductaSancionada)
 st.title('Conducta Sancionada')
@@ -187,7 +198,7 @@ with right_column:
     fig = px.bar(df_conducta_sancionada.head(top_n_conducta_sancionada), x='ConductaSancionada', y='median', color='median', color_continuous_scale=px.colors.sequential.Viridis)
     st.plotly_chart(fig, use_container_width=True)
 
-
+st.markdown("***")
 
 
 #sales experiment
