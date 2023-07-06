@@ -1,11 +1,23 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 import seaborn as sns
 from datetime import datetime, timedelta
 import base64
 import textwrap
 from PIL import Image
+import numpy as np
+import re
+
+def remove_extra_spaces(text):
+    # Remove multiple spaces before and after a phrase
+    text = re.sub(r'\s+', ' ', text.strip())
+
+    # Remove multiple spaces between words
+    text = re.sub(r'\s+', ' ', text)
+
+    return text
 
 # def render_svg(svg):
 #     """Renders the given svg string."""
@@ -32,8 +44,8 @@ df['FechaDeImposicion'] = df['FechaDeImposicion'].apply(lambda x: datetime(1900,
 df['FechaDeImposicion'] = pd.to_datetime(df['FechaDeImposicion'])
 df['Monto'] = df['Monto'].str.replace('$', '').str.replace(',', '').astype(float)
 #columns Subsector, TipoDeSancion into a lower case and delete multiple spaces or tabs or new lines
-df['Subsector'] = df['Subsector'].str.lower().str.replace('\s+', ' ', regex=True)
-df['TipoDeSancion'] = df['TipoDeSancion'].str.lower().str.replace('\s+', ' ', regex=True)
+df['Subsector'] = df['Subsector'].str.lower().str.strip().str.replace('\s+', ' ', regex=True)
+df['TipoDeSancion'] = df['TipoDeSancion'].str.lower().str.strip().str.replace('\s+', ' ', regex=True)
 
 st.set_page_config(
     page_title='Multas Dashboard', 
@@ -158,6 +170,71 @@ with left_column:
 with right_column:
     fig = px.bar(df_conducta_sancionada.head(top_n_conducta_sancionada), x='ConductaSancionada', y='Monto', color='Monto', color_continuous_scale=px.colors.sequential.Viridis)
     st.plotly_chart(fig, use_container_width=True)
+
+#top conducta sancionada por monto acumulado (add mean and stddev col), mean and stddev format to 2 decimals (add numero de multas col)
+df_conducta_sancionada = df.groupby('ConductaSancionada')['Monto'].agg(['sum', 'median' , 'mean', 'std', 'count']).sort_values(by='sum', ascending=False).reset_index()
+df_conducta_sancionada['sum'] = df_conducta_sancionada['sum'].apply(lambda x: round(x, 2))
+df_conducta_sancionada['mean'] = df_conducta_sancionada['mean'].apply(lambda x: round(x, 2))
+df_conducta_sancionada['median'] = df_conducta_sancionada['median'].apply(lambda x: round(x, 2))
+df_conducta_sancionada['std'] = df_conducta_sancionada['std'].apply(lambda x: round(x, 2))
+st.subheader('Top conducta sancionada de monto acumulado con mediana, media y desviación estándar')
+top_n_conducta_sancionada = st.slider('Select top n', 3, df_conducta_sancionada.shape[0], 3, key='conducta_sancionada_mas_ixm')
+st.metric(label="Total Acumulado", value=f'${round(df_conducta_sancionada.head(top_n_conducta_sancionada)["sum"].sum()/1000000,0)}M', delta=f'${round(df_conducta_sancionada.head(top_n_conducta_sancionada)["sum"].iloc[-1]/1000000,0)}M')
+left_column, right_column = st.columns(2)
+with left_column:
+    st.dataframe(df_conducta_sancionada.head(top_n_conducta_sancionada))
+with right_column:
+    fig = px.bar(df_conducta_sancionada.head(top_n_conducta_sancionada), x='ConductaSancionada', y='median', color='median', color_continuous_scale=px.colors.sequential.Viridis)
+    st.plotly_chart(fig, use_container_width=True)
+
+
+
+
+#sales experiment
+st.title('Maxima ganancia posible')
+#add streamlit multiselect of Subsector col values for exclude in dataframe
+subsector_excluded = st.multiselect(
+    'Selecciona el subsector a excluir',
+    df['Subsector'].unique(),
+    default=[np.nan]
+)
+
+#query df with excluded values
+df_q = df.query('Subsector not in @subsector_excluded')
+prices = np.arange(100000, 300000, 1000)
+df_sorted = df_q.sort_values(by='Monto')
+sales = [(df_sorted['Monto'] > price).sum() for price in prices]
+data = {'price': prices, 'sales': sales}
+df_plot = pd.DataFrame(data)
+df_plot['profit'] = df_plot['price'] * df_plot['sales']
+# Define the min and max color values
+min_color = df_plot['profit'].min()
+max_color = df_plot['profit'].max()
+# Define the desired midpoint of the color scale
+mid_color = (max_color + min_color) / 2
+# Find the price that maximizes profit
+max_profit_index = df_plot['profit'].idxmax()
+max_profit_price = df_plot.loc[max_profit_index, 'price']
+
+
+fig = px.scatter(df_plot, x='price', y='sales', color='profit',
+                 color_continuous_scale='Viridis',
+                 range_color=[min_color, max_color],
+                 color_continuous_midpoint=mid_color)
+
+# Update color bar's length and thickness
+fig.update_layout(coloraxis_colorbar=dict(len=0.65, thickness=10))
+# Add a vertical line at the price that maximizes profit
+fig.add_trace(go.Scatter(x=[max_profit_price, max_profit_price], y=[df_plot['sales'].min(), df_plot['sales'].max()], mode='lines', name='Max Profit Price', line=dict(color='red')))
+st.plotly_chart(fig, use_container_width=True)
+#indicator of max profit price, sales needed to achieve max profit price, and optimal price
+left, center, right = st.columns(3)
+with left:
+    st.metric(label="Precio anual óptimo", value=f'${round(max_profit_price,0)}', delta =f'${round(max_profit_price/12,0)} mensuales' )
+with center:
+    st.metric(label="Ventas", value=f'{round(df_plot.loc[max_profit_index, "sales"],0)}', delta=f'{round((df["FechaDeImposicion"].max() - df["FechaDeImposicion"].min()).days / 365,2)} Años')
+with right:
+    st.metric(label="Ganancia máxima", value=f'${round(df_plot.loc[max_profit_index, "profit"]/1_000_000,2)}M')
 
 
 st.title('Full Dataset')
